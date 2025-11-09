@@ -1,5 +1,6 @@
 # MacOS files
 .DS_Store
+.swp
 
 # History files
 .Rhistory
