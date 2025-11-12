@@ -7,7 +7,7 @@ library(tidyverse)
 # Get all rows with the species code and create a new summarised df on which to operate
 PrimaryGroupExtractor <- function(primary_group_value) {
   filter(ana_frame, !!sym(primary_group) == primary_group_value) %>%
-    group_by(act_measure) %>%
+    group_by(!!sym(primary_group), act_measure) %>%
     summarise(
       n = n(),
       obs = max(pres),
