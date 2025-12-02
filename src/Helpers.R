@@ -26,8 +26,8 @@ GetDistinctMeasure <- function(dataset, measure_name) {
   return(distinct_measure)
 }
 
-CalculateThresholdMultiplier <- function(threshold){
-  # If the threshold = 0, the multiplier is 1
+CalculateIncrementMultiplier <- function(increment, decplace){
+  # If the increment = 1, the multiplier is 1
   # If the threshold is positive integer >= 1 < 10, the multiplier will be 1/threshold - ???
   # If it is >= 10, then the multiplier will be 1/threshold - ???
   # If 0 < threshold < 1, the multiplier will be 10^GetDecimalPlaces(threshold)
@@ -38,4 +38,12 @@ CalculateThresholdMultiplier <- function(threshold){
   # of the day will bring us back to the original value while allowing easy counts/bins
   # For values != to 1 or 0 but that are still integers, is this needed? Because if the decimal place version
   # works, would that be similar?
+  
+  if(decplace > 0){
+    x <- 1
+    x <- 10^decplace
+    return(increment*x)
+  }
+  
+  return(1/increment)
 }
