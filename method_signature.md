@@ -1,6 +1,10 @@
 BinnedDataGenerator
 DataBinGenerator
 
+baseframe
+The dataframe on which to operate.
+Let's change the name of this before final.
+
 measure
 default = depth
 Depth
@@ -15,8 +19,9 @@ logit
 default = FALSE
 Whether this is for logistic regression or not. True triggers requiring at least 1 positive and 1 negative observation in addition to meeting the bin_size minimum.
 
-measure_threshold
-default = 0
+measure_increment
+default = 1
+Defines the increments over which to count for the measure. For example, 5 would indicate a grouping by 5 to create categories (0-5, 5-10, 10-15, etc) and then perform the operations. Zero should throw an error.
 
 merge_final
 default = FALSE
@@ -32,4 +37,4 @@ The primary variable to group by
 
 Do we need a partition value for the measure, e.g. 0-1, 0-5 (5-10, 10-15, ...)?
 
-BinnedDataGenerator(measure, bin_size, logit, measure_threshold, primary_group = "species_cd", merge_final = FALSE, results_filename = NULL)
+BinnedDataGenerator(measure, bin_size, logit = FALSE, measure_increment = 1, primary_group = "species_cd", merge_final = FALSE, results_filename = NULL)
