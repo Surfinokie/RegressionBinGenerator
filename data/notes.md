@@ -23,3 +23,5 @@ select group_name, measure from test_data
 Fill sparse values
 Transform the initial data frame so that missing values are filled within the category, e.g. a dataset that went 23, 23, 25, 28 would have zero-valued rows entered for 26 and 27.
 This has to be done within each group.
+
+Need test data that has missing group values at count boundaries to check for min/max/mid.
