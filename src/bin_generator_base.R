@@ -91,14 +91,14 @@ ProcessBins <- function(processing_frame) {
     }
     
     #colnames(result_frame) <- c("species_cd", "obs", "min_dc", "max_dc", "pos_obs", "neg_obs")
-    colnames(result_frame) <- c(rbg_env$primary_group, "observations", "min_observations", "max_observations", "pos_observations", "neg_observations")
+    colnames(result_frame) <- c(rbg_env$primary_group, "observations", "min_measure", "max_measure", "pos_observations", "neg_observations")
     intermed_result_frame <- result_frame %>%
       group_by(rbg_env$the_frame[1,c("group_name")]) %>%
       summarise(
         max(observations),
-        min(min_observations),
-        min(min_observations),
-        max(max_observations),
+        min(min_measure),
+        min(min_measure),
+        max(max_measure),
         sum(pos_observations),
         sum(neg_observations)
       )
@@ -106,7 +106,7 @@ ProcessBins <- function(processing_frame) {
     #change this to use the variables
     #is this necessary?
     #colnames(intermed_result_frame) <- c("species_cd", "obs", "min_dc", "max_dc", "pos_obs", "neg_obs")
-    colnames(intermed_result_frame) <- c(rbg_env$primary_group, "observations", "min_observations", "max_observations", "pos_observations", "neg_observations")
+    colnames(intermed_result_frame) <- c(rbg_env$primary_group, "observations", "min_measure", "max_measure", "pos_observations", "neg_observations")
     
     rbg_env$result <- rbind(rbg_env$result, intermed_result_frame)
   }
@@ -132,6 +132,81 @@ ProcessBins <- function(processing_frame) {
   # return the result frame
   return(rbg_env$result)
 }
+
+
+ProcessLogistic <- function(processing_frame) {
+  # go through result frame and add subsequent rows until pos_obs and neg_obs both >= 1
+  # do pos_obs first
+  vCols <<- c("pos_obs", "neg_obs")
+  
+  for (j in seq_along(vCols)) {
+    result <- data.frame()
+    sit <- 1
+    current_sum <- 0
+    vSppCd <- vector()
+    vObs <- vector()
+    vMinDc <- vector()
+    vMaxDc <- vector()
+    vPosObs <- vector()
+    vNegObs <- vector()
+    intermed_result_frame <- data.frame(species_cd = character(), obs = numeric(), min_dc = numeric(), max_dc = numeric(), pos_obs = numeric(), neg_obs = numeric())
+    # this loop takes care of everything except potentially the last row
+    while (sit <= nrow(processing_frame)) {
+      while (current_sum < 1 && sit <= nrow(processing_frame)) {
+        current_sum <- current_sum + sum(processing_frame[sit, vCols[j]])
+        vSppCd <- append(vSppCd, processing_frame[sit, c("species_cd")])
+        vObs <- append(vObs, processing_frame[sit, c("obs")])
+        vMinDc <- append(vMinDc, processing_frame[sit, c("min_dc")])
+        vMaxDc <- append(vMaxDc, processing_frame[sit, c("max_dc")])
+        vPosObs <- append(vPosObs, processing_frame[sit, c("pos_obs")])
+        vNegObs <- append(vNegObs, processing_frame[sit, c("neg_obs")])
+        sit <- sit + 1
+      }
+      tempdf <- data.frame(unlist(vSppCd), unlist(vObs), unlist(vMinDc), unlist(vMaxDc), unlist(vPosObs), unlist(vNegObs))
+      colnames(tempdf) <- c("species_cd", "obs", "min_dc", "max_dc", "pos_obs", "neg_obs")
+      result_frame <- tempdf %>%
+        group_by(species_cd) %>%
+        summarise(sum(obs), min(min_dc), max(max_dc), sum(pos_obs), sum(neg_obs))
+      colnames(result_frame) <- c("species_cd", "obs", "min_dc", "max_dc", "pos_obs", "neg_obs")
+      result <- rbind(result, result_frame)
+      
+      # clear all the variables for next loop
+      intermed_result_frame <- intermed_result_frame[0, ]
+      result_frame <- result_frame[0, ]
+      tempdf <- tempdf[0, ]
+      vSppCd <- vector()
+      vObs <- vector()
+      vMinDc <- vector()
+      vMaxDc <- vector()
+      vPosObs <- vector()
+      vNegObs <- vector()
+      current_sum <- 0
+    }
+    
+    colnames(result) <- c("species_cd", "obs", "min_dc", "max_dc", "pos_obs", "neg_obs")
+    if (result[nrow(result), vCols[j]] == 0) {
+      processing_frame <- result
+      result[nrow(result) - 1, c("obs")] <- result[nrow(result) - 1, c("obs")] + result[nrow(result), c("obs")]
+      result[nrow(result) - 1, c("max_dc")] <- result[nrow(result), c("max_dc")]
+      result[nrow(result) - 1, vCols[j]] <- result[nrow(result) - 1, vCols[j]]
+      result[nrow(result) - 1, vCols[vCols != vCols[j]]] <- result[nrow(result) - 1, vCols[vCols != vCols[j]]] + result[nrow(result), vCols[vCols != vCols[j]]]
+      result <- result %>% filter(!row_number() %in% nrow(result))
+    }
+    processing_frame <- result
+  }
+  
+  # really need to turn this into a function probably called by the function caller
+  notcol <- vCols[!(vCols %in% vCols[j])]
+  if ((processing_frame[nrow(processing_frame), vCols[j]] == 0) || (processing_frame[nrow(processing_frame), vCols[!(vCols %in% vCols[j])]] == 0)) {
+    processing_frame[nrow(processing_frame) - 1, c("obs")] <- processing_frame[nrow(processing_frame) - 1, c("obs")] + processing_frame[nrow(processing_frame), c("obs")]
+    processing_frame[nrow(processing_frame) - 1, c("max_dc")] <- processing_frame[nrow(processing_frame), c("max_dc")]
+    processing_frame[nrow(processing_frame) - 1, vCols[j]] <- processing_frame[nrow(processing_frame) - 1, vCols[j]]
+    processing_frame[nrow(processing_frame) - 1, vCols[vCols != vCols[j]]] <- processing_frame[nrow(processing_frame) - 1, vCols[vCols != vCols[j]]] + processing_frame[nrow(processing_frame), vCols[vCols != vCols[j]]]
+    processing_frame <- processing_frame %>% filter(!row_number() %in% nrow(processing_frame))
+  }
+  return(processing_frame)
+}
+
 
 RegressionBinGenerator <- function(baseframe, measure, bin_size, logit = FALSE, measure_increment = 1, primary_group = "species_cd", merge_final = FALSE, results_filename = NULL){
   if(!is.numeric(measure_increment)){
@@ -169,8 +244,8 @@ RegressionBinGenerator <- function(baseframe, measure, bin_size, logit = FALSE, 
     final_result <- data.frame(
       group_name = character(0),
       observations = double(0),
-      min_observations = double(0),
-      max_observations = double(0),
+      min_measure = double(0),
+      max_measure = double(0),
       pos_observations = double(0),
       neg_observations = double(0)
     )
@@ -185,17 +260,17 @@ RegressionBinGenerator <- function(baseframe, measure, bin_size, logit = FALSE, 
       rbg_env$the_frame <- rbg_env$the_frame[0, ]
     }
 
-    # Add a final midpoint column that is the mid between min_observations and max_observations
+    # Add a final midpoint column that is the mid between min_measure and max_measure
     # and then convert back to the original base 
     # The midpoint calculation happens after the min and max columns have been adjusted, hence no need to divide by the multiplier as it has already been done
     final_result <- final_result %>%
-      mutate(min_observations = min_observations/rbg_env$measure_multiplier,
-             max_observations = max_observations/rbg_env$measure_multiplier,
-             midpoint = (min_observations + max_observations) / 2)
+      mutate(min_measure = min_measure/rbg_env$measure_multiplier,
+             max_measure = max_measure/rbg_env$measure_multiplier,
+             mid_measure = (min_measure + max_measure) / 2)
     
     # Reorder the columns for clarity
     final_result <- final_result %>%
-      relocate(midpoint, .after = max_observations)
+      relocate(mid_measure, .after = max_measure)
     
     
     return(final_result)
@@ -214,6 +289,10 @@ PrepareData <- function() {
   rbg_env$group_names <- unique(rbg_env$ana_frame[[rbg_env$primary_group]])
   
   if(length(rbg_env$group_names) < 1){
+    #free objects and memory
+    #rm(rbg_env)
+    #gc()
+    #Message user on having no data to process
     stop("No data to process due to null primary_group. Check to ensure that your primary_group variable contains values and is properly named.")
   }
 }
@@ -222,14 +301,16 @@ PrepareData <- function() {
 
 
 # Setup
-#baseframe <- read.csv("data/test_data_basic.csv", header = TRUE)
-baseframe <- read.csv("data/test_data_basic_mult.csv", header = TRUE)
+baseframe <- read.csv("data/test_data_basic.csv", header = TRUE)
+#baseframe <- read.csv("data/test_data_basic_mult.csv", header = TRUE)
 primary_group <- "group_name"
 measure <- "measure_val"
 measure_increment <- 1
 measure_increment_dec <- 0
 measure_multiplier <- 1
 group_names <- c()
+
+huh <- RegressionBinGenerator(baseframe, "measure_val", 10, primary_group="group_name")
 
 # create new variables for our calculated measurements
 # yeah, I know we don't need a new dataframe but I like to be able to debug easily
@@ -243,6 +324,7 @@ group_names <- unique(ana_frame[[primary_group]])
 a_frame = PrimaryGroupExtractor("tst_spp")
 #write.csv(a_frame, "data/pge_stepart.csv")
 
-huh <- RegressionBinGenerator(baseframe, "measure_val", 20, FALSE, 1, "group_name")
+huh <- RegressionBinGenerator(baseframe, "measure_val", 5)
+#huh <- RegressionBinGenerator(baseframe, "measure_val_2", 20, FALSE, .01, "group_name")
 
 mult <- CalculateIncrementMultiplier(1, 0)

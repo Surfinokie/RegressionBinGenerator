@@ -39,11 +39,11 @@ CalculateIncrementMultiplier <- function(increment, decplace){
   # For values != to 1 or 0 but that are still integers, is this needed? Because if the decimal place version
   # works, would that be similar?
   
-  if(decplace > 0){
-    x <- 1
+  #if(decplace > 0){
+    #x <- 1
     x <- 10^decplace
-    return(increment*x)
-  }
+    return((increment*x)*x)
+  #}
   
   return(1/increment)
 }

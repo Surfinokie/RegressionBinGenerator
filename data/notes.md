@@ -25,3 +25,5 @@ Transform the initial data frame so that missing values are filled within the ca
 This has to be done within each group.
 
 Need test data that has missing group values at count boundaries to check for min/max/mid.
+
+Re-comment CalculateIncrementMultiplier
